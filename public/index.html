@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Partido en directo</title>
+  <link rel="stylesheet" href="visual.css">
+</head>
+<body>
+  <div class="shell">
+    <!-- Marco principal -->
+    <div class="frame" id="frame">
+
+      <!-- Zona de vídeo + marcador -->
+      <div class="video-area" style="flex:1; position:relative;">
+        <!-- Twitch embed -->
+        <iframe
+          id="player"
+          style="position:absolute;inset:0;width:100%;height:100%;border:0;display:none"
+          allowfullscreen
+          src="">
+        </iframe>
+
+        <!-- Scoreboard -->
+        <div class="score" id="scorebar">
+          <span class="badge" id="nameA">Local</span>
+          <strong id="scoreA">0</strong>
+          <span class="vs">-</span>
+          <strong id="scoreB">0</strong>
+          <span class="badge" id="nameB">Visitante</span>
+          <span class="timer" id="timer">00:00</span>
+        </div>
+      </div>
+
+      <!-- Controles ADMIN -->
+      <div class="admin" id="admin" style="display:none">
+        <div class="panel">
+          <strong>Marcador</strong>
+          <div class="row"><input id="inNameA" class="w100" type="text" placeholder="Nombre Local"></div>
+          <div class="row"><input id="inNameB" class="w100" type="text" placeholder="Nombre Visitante"></div>
+          <div class="row">
+            <button onclick="bump('A',1)">+1 Local</button>
+            <button class="ghost" onclick="bump('A',-1)">-1 Local</button>
+            <button onclick="bump('B',1)">+1 Visitante</button>
+            <button class="ghost" onclick="bump('B',-1)">-1 Visitante</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <strong>Tiempo</strong>
+          <div class="row">
+            <button onclick="timerStart()">▶ Iniciar</button>
+            <button class="ghost" onclick="timerPause()">⏸ Pausa</button>
+            <button class="ghost" onclick="timerReset()">⟲ Reset</button>
+          </div>
+          <div class="row">
+            <label>Min inicial</label>
+            <input id="startMin" type="number" value="0" min="0" style="width:80px">
+          </div>
+        </div>
+
+        <div class="panel">
+          <strong>Alineación</strong>
+          <div class="row">
+            <label for="formationSel">Formación</label>
+            <select id="formationSel" class="w100">
+              <option value="1-2-3-1">1-2-3-1</option>
+              <option value="1-3-2-1">1-3-2-1</option>
+            </select>
+          </div>
+          <p class="hint" style="margin-top:6px">Las cartas se recolocan sin perder nombres/fotos.</p>
+        </div>
+
+        <div class="panel">
+          <strong>Estadísticas (Google Sheets)</strong>
+          <div class="row">
+            <input id="statsCsvUrl" class="w100" type="text" placeholder="Pega aquí la URL CSV 'Publicar en la web' de tu Google Sheets">
+          </div>
+          <div class="row">
+            <button onclick="saveStatsCsv()">Guardar URL</button>
+            <button class="ghost" onclick="refreshStats()">Refrescar</button>
+          </div>
+          <p class="hint" style="margin-top:6px">
+            Google Sheets → <em>Archivo</em> → <em>Publicar en la web</em> → elige <b>Hoja</b> + <b>CSV</b> → pega el enlace aquí.
+          </p>
+        </div>
+      </div>
+
+      <!-- Botón de fullscreen -->
+      <button onclick="toggleFullscreen()" 
+              style="position:absolute;top:10px;right:10px;z-index:9999;
+                     background:#e11d48;color:#fff;border:0;border-radius:8px;
+                     padding:6px 10px;cursor:pointer">
+        ⛶
+      </button>
+    </div>
+
+    <!-- ==================== LINEUP / CAMPO ==================== -->
+    <section class="lineup">
+      <h2 class="lineup-title">Alineación en directo</h2>
+
+      <div class="pitch realista">
+        <!-- Las 7 posiciones se pintan desde JS dentro de este contenedor -->
+        <div id="pitch-cards"></div>
+      </div>
+
+      <!-- Ayuda solo visible en admin -->
+      <div id="lineup-help" class="lineup-help" style="display:none">
+        <p><strong>Modo admin:</strong> toca cualquier posición para editar <em>Nombre</em> y <em>URL de imagen</em>.</p>
+      </div>
+
+      <!-- BANQUILLO / SUPLENTES -->
+      <h3 class="bench-title">Suplentes</h3>
+      <div class="bench">
+        <div id="subs-row"></div>
+      </div>
+      <p class="hint" id="subs-help" style="display:none; margin-top:8px">
+        <strong>Modo admin:</strong> toca cualquier suplente para editar <em>Nombre</em> y <em>URL de imagen</em>.
+      </p>
+    </section>
+
+    <!-- ==================== ESTADÍSTICAS ==================== -->
+    <section class="stats" id="stats-section">
+      <h2 class="lineup-title">Estadísticas de jugadores</h2>
+      <div class="stats-meta">
+        <span id="stats-source">Sin URL configurada</span>
+        <span id="stats-updated"></span>
+      </div>
+      <div class="stats-table-wrap">
+        <table class="stats-table" id="stats-table"></table>
+      </div>
+    </section>
+  </div>
+
+  <!-- GATE (PIN) -->
+  <div class="gate" id="gate">
+    <div class="card">
+      <h1>Partido en directo</h1>
+      <p class="hint">Introduce tu PIN para entrar. Escribe el PIN de <b>espectador</b> o de <b>admin</b>.</p>
+      <div class="sep"></div>
+      <div class="flex">
+        <input id="pin" type="password" placeholder="PIN" class="w100">
+        <button onclick="enter()">Entrar</button>
+      </div>
+      <p class="hint" style="margin-top:12px">Comparte solo el PIN de espectador con tu gente.</p>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

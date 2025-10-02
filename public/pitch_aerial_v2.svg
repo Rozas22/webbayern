@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b3a16"/><stop offset="100%" stop-color="#0f5623"/>
+    </linearGradient>
+    <radialGradient id="vign" cx="50%" cy="50%" r="70%">
+      <stop offset="60%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(0,0,0,0.45)"/>
+    </radialGradient>
+    <clipPath id="leftArcClip">
+      <rect x="292.57" y="60" width="1247.43" height="780"/>
+    </clipPath>
+    <clipPath id="rightArcClip">
+      <rect x="60" y="60" width="1247.43" height="780"/>
+    </clipPath>
+  </defs>
+  <rect width="1600" height="900" fill="url(#grass)"/>
+  <rect x="60" y="60" width="1480" height="780" fill="none" stroke="white" stroke-width="6"/>
+  <line x1="800.00" y1="60" x2="800.00" y2="840" stroke="white" stroke-width="6"/>
+  <circle cx="800.00" cy="450.00" r="116.96" fill="none" stroke="white" stroke-width="6"/>
+  <circle cx="800.00" cy="450.00" r="6" fill="white"/>
+  <rect x="60" y="218.75" width="232.57" height="462.49" fill="none" stroke="white" stroke-width="6"/>
+  <rect x="60" y="344.93" width="77.52" height="210.14" fill="none" stroke="white" stroke-width="6"/>
+  <circle cx="215.05" cy="450.00" r="6" fill="white"/>
+  <rect x="1307.43" y="218.75" width="232.57" height="462.49" fill="none" stroke="white" stroke-width="6"/>
+  <rect x="1462.48" y="344.93" width="77.52" height="210.14" fill="none" stroke="white" stroke-width="6"/>
+  <circle cx="1384.95" cy="450.00" r="6" fill="white"/>
+  <g clip-path="url(#leftArcClip)">
+    <path d="M 215.05 345.04 A 128.97 104.96 0 0 1 215.05 554.96" fill="none" stroke="white" stroke-width="6"/>
+  </g>
+  <g clip-path="url(#rightArcClip)">
+    <path d="M 1384.95 345.04 A 128.97 104.96 0 0 0 1384.95 554.96" fill="none" stroke="white" stroke-width="6"/>
+  </g>
+  <path d="M 60 60 a 12.78 12.78 0 0 0 12.78 12.78" fill="none" stroke="white" stroke-width="6"/>
+  <path d="M 1540 60 a -12.78 12.78 0 0 1 -12.78 12.78" fill="none" stroke="white" stroke-width="6"/>
+  <path d="M 60 840 a 12.78 -12.78 0 0 1 12.78 -12.78" fill="none" stroke="white" stroke-width="6"/>
+  <path d="M 1540 840 a -12.78 -12.78 0 0 0 -12.78 -12.78" fill="none" stroke="white" stroke-width="6"/>
+  <rect x="36" y="405.00" width="24" height="90" fill="none" stroke="white" stroke-width="4"/>
+  <rect x="1540" y="405.00" width="24" height="90" fill="none" stroke="white" stroke-width="4"/>
+  <rect width="1600" height="900" fill="url(#vign)"/>
+</svg>
