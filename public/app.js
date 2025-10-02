@@ -183,6 +183,60 @@ function getPositionsForCurrent() {
   return pos;
 }
 
+/* ================== INDEX DE JUGADORES (nombre → imagen) ==================
+   - playersRef = /players  (clave = nombre normalizado, valor = { name, img })
+   - Autoaplica imagen cuando hay nombre y no hay img
+   - Cuando el admin guarda una nueva URL, se persiste en /players
+========================================================================== */
+const playersRef = ref(db, "players");
+let playersIndex = {};
+const nameKey = (n)=> normName(n||""); // reutiliza normName de abajo
+
+onValue(playersRef, snap=>{
+  playersIndex = snap.val() || {};
+  fillMissingImagesFromIndex(); // si llega/actualiza el índice, intentamos rellenar huecos
+});
+
+function getImgByName(name){
+  const k = nameKey(name);
+  const rec = playersIndex?.[k];
+  return (rec && rec.img) ? sanitizeImageUrl(rec.img) : "";
+}
+
+function saveImgForName(name, img){
+  const k = nameKey(name);
+  const url = sanitizeImageUrl(img||"");
+  if(!k || !url) return;
+  update(playersRef, { [k]: { name: (name||"").trim(), img: url } });
+}
+
+function fillMissingImagesFromIndex(){
+  // titulares
+  const upLineup = {};
+  Object.entries(lineupState || {}).forEach(([slot, data])=>{
+    if(!data) return;
+    const nm = data.name || "";
+    if(nm && (!data.img || data.img.trim()==="")){
+      const found = getImgByName(nm);
+      if(found) upLineup[slot] = { ...data, img: found };
+    }
+  });
+  if(Object.keys(upLineup).length) update(lineupRef, upLineup);
+
+  // suplentes
+  const upSubs = {};
+  Object.entries(subsState || {}).forEach(([slot, data])=>{
+    if(!data) return;
+    const nm = data.name || "";
+    if(nm && (!data.img || data.img.trim()==="")){
+      const found = getImgByName(nm);
+      if(found) upSubs[slot] = { ...data, img: found };
+    }
+  });
+  if(Object.keys(upSubs).length) update(subsRef, upSubs);
+}
+// ========================================================================
+
 function createPlayerCardAt(id, coords, data, isAdmin){
   const card = document.createElement('div');
   card.className = "player-card" + (isAdmin ? " admin-edit" : "");
@@ -192,7 +246,7 @@ function createPlayerCardAt(id, coords, data, isAdmin){
   const img = document.createElement('img');
   img.loading = "lazy";
   img.referrerPolicy = "no-referrer";
-  const candidate = sanitizeImageUrl(data?.img || "");
+  const candidate = sanitizeImageUrl(data?.img || getImgByName(data?.name) || "");
   img.src = candidate || "https://via.placeholder.com/300x400?text=Jugador";
   img.alt = data?.name || id;
   img.onerror = ()=>{ img.src = FALLBACK_IMG; };
@@ -213,12 +267,20 @@ function createPlayerCardAt(id, coords, data, isAdmin){
 function editPlayerAt(slotId, current={}){
   const name = prompt(`Nombre para ${slotId}:`, current.name || "");
   if(name === null) return;
-  const img  = prompt("URL de imagen (jpg/png):", current.img || "");
+
+  // Sugerimos la imagen guardada para ese nombre (o la actual si hay)
+  const suggested = getImgByName(name) || current.img || "";
+  const img  = prompt("URL de imagen (jpg/png):", suggested);
   if(img === null) return;
 
+  const cleanImg = (img||"").trim();
   const updates = {};
-  updates[slotId] = { name: (name||"").trim() || slotId, img: (img||"").trim() };
+  updates[slotId] = { name: (name||"").trim() || slotId, img: cleanImg };
+
   update(lineupRef, updates);
+
+  // Si hay URL, la persistimos en el index global
+  if(cleanImg) saveImgForName(name, cleanImg);
 }
 
 function renderLineup(){
@@ -252,7 +314,8 @@ function renderLineup(){
 onValue(lineupRef, snap=>{
   lineupState = snap.val() || {};
   renderLineup();
-  refreshStatsView();   // rehace la tabla con los nombres/slots actuales
+  fillMissingImagesFromIndex(); // intenta rellenar imágenes faltantes
+  refreshStatsView();           // rehace la tabla con los nombres/slots actuales
 });
 onValue(lineupRef, snap=>{
   const exists = snap.exists();
@@ -312,7 +375,7 @@ function createSubCard(slotId, data, isAdmin){
   const img = document.createElement('img');
   img.loading = "lazy";
   img.referrerPolicy = "no-referrer";
-  const candidate = sanitizeImageUrl(data?.img || "");
+  const candidate = sanitizeImageUrl(data?.img || getImgByName(data?.name) || "");
   img.src = candidate || "https://via.placeholder.com/300x400?text=Jugador";
   img.alt = data?.name || slotId;
   img.onerror = ()=>{ img.src = FALLBACK_IMG; };
@@ -333,12 +396,17 @@ function createSubCard(slotId, data, isAdmin){
 function editSubAt(slotId, current={}){
   const name = prompt(`Nombre para ${slotId}:`, current.name || "");
   if(name === null) return;
-  const img  = prompt("URL de imagen (jpg/png):", current.img || "");
+
+  const suggested = getImgByName(name) || current.img || "";
+  const img  = prompt("URL de imagen (jpg/png):", suggested);
   if(img === null) return;
 
+  const cleanImg = (img||"").trim();
   const updates = {};
-  updates[slotId] = { name: (name||"").trim() || slotId, img: (img||"").trim() };
+  updates[slotId] = { name: (name||"").trim() || slotId, img: cleanImg };
   update(subsRef, updates);
+
+  if(cleanImg) saveImgForName(name, cleanImg);
 }
 
 function renderSubs(){
@@ -361,7 +429,8 @@ function renderSubs(){
 onValue(subsRef, snap=>{
   subsState = snap.val() || {};
   renderSubs();
-  refreshStatsView();   // rehace la tabla con suplentes actuales
+  fillMissingImagesFromIndex(); // intenta rellenar imágenes faltantes
+  refreshStatsView();           // rehace la tabla con suplentes actuales
 });
 onValue(subsRef, snap=>{
   if(!snap.exists()){
@@ -389,8 +458,9 @@ function normName(s){
     .replace(/\u00A0/g, ' ')       // NBSP → espacio normal
     .trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // sin acentos
-    .toLowerCase()
-    .replace(/\s+/g, ' ');         // colapsa espacios
+    .replace(/[^\p{L}\p{N}]+/gu,' ') // quita puntos, barras, guiones, etc.
+    .replace(/\s+/g,' ')            // colapsa espacios
+    .toLowerCase();
 }
 
 // Mini parser CSV con comillas
@@ -453,31 +523,33 @@ function renderStatsTable(){
   const h = statsData.headers;
   const hm = headersMap(h);
 
-  const colSlot = hm['slot'] ?? hm['id'] ?? hm['posicion'] ?? -1;
-  const colName = hm['nombre'] ?? hm['name'] ?? -1;
-  const colG   = hm['goles'] ?? hm['goals'] ?? -1;
-  const colA   = hm['asistencias'] ?? hm['asists'] ?? hm['assists'] ?? -1;
+  const pickCol = (...cands) => {
+    for (const k of cands) {
+      const idx = hm[normName(k)];
+      if (typeof idx === 'number') return idx;
+    }
+    return -1;
+  };
 
-  // <<< AQUI ampliamos alias para "Partidos Jugados"
-  const colPJ = (
-    hm['partidos jugados'] ??
-    hm['pj'] ??
-    hm['partidos'] ??
-    hm['matches played'] ??
-    hm['matches'] ??
-    hm['apps'] ??
-    hm['appearances'] ??
-    -1
+  const colSlot = pickCol('slot','id','posicion','posición');
+  const colName = pickCol('nombre','name','jugador','player');
+
+  const colG   = pickCol('goles','goals','gol');
+  const colA   = pickCol('asistencias','assists','asists','asist','assist');
+
+  const colPJ  = pickCol(
+    'partidos jugados','part jugados','partidos','pj',
+    'matches played','matches','apps','appearances','jugados'
   );
 
-  const colTA  = hm['ta'] ?? hm['amarillas'] ?? hm['yellow'] ?? -1;
-  const colTR  = hm['tr'] ?? hm['rojas'] ?? hm['red'] ?? -1;
-  const colVal = hm['valoracion'] ?? hm['rating'] ?? -1;
+  const colTA  = pickCol('ta','amarillas','yellow','yellow cards');
+  const colTR  = pickCol('tr','rojas','red','red cards');
+  const colVal = pickCol('valoracion','valoración','rating','puntuacion','puntuación');
 
   const bySlot = new Map();
   const byName = new Map();
   statsData.rows.forEach(r=>{
-    const slot = colSlot>=0 ? normName(r[colSlot]||'').toUpperCase() : '';
+    const slot = colSlot>=0 ? (r[colSlot]||'').toString().trim().toUpperCase() : '';
     const name = colName>=0 ? normName(r[colName]) : '';
     if(slot) bySlot.set(slot, r);
     if(name) byName.set(name, r);
